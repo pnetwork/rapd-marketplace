@@ -1,0 +1,50 @@
+# Source: pare-rabbitmq/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-rabbitmq
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: pare-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: Helm
+automountServiceAccountToken: true
+secrets:
+  - name: {{ .Release.Name }}-rabbitmq
+---
+# Source: pare-rabbitmq/templates/role.yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Release.Name }}-rabbitmq-endpoint-reader
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: pare-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: Helm
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]
+---
+# Source: pare-rabbitmq/templates/rolebinding.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Release.Name }}-rabbitmq-endpoint-reader
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: pare-rabbitmq
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-rabbitmq
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-rabbitmq-endpoint-reader
+---

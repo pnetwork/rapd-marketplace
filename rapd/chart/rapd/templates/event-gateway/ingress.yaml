@@ -1,0 +1,44 @@
+# apiVersion: gateway.networking.k8s.io/v1beta1
+# kind: HTTPRoute
+# metadata:
+#   name: {{ .Release.Name }}-event-gateway
+#   namespace: {{ .Release.Namespace }}
+# spec:
+#   parentRefs:
+#   - group: gateway.networking.k8s.io
+#     kind: Gateway
+#     name: rapd
+#     namespace: {{ .Release.Namespace }}
+#   rules:
+#   - matches:
+#     - path:
+#         type: PathPrefix
+#         value: {{ .Values.eventGateway.httproute.prefixPath.path }}
+#     backendRefs:
+#     - name: {{ .Release.Name }}-event-gateway
+#       port: {{ .Values.eventGateway.service.port }}
+#       kind: Service
+#       weight: 1
+#       group: ""
+
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: {{ .Release.Name }}-event-gateway
+#   namespace: {{ .Release.Namespace }}
+#   annotations:
+#   {{- if .Values.certificate  }}
+#     networking.gke.io/managed-certificates: {{ .Values.certificate }}
+#   {{- end }}
+#     kubernetes.io/ingress.class: "gce"
+# spec:
+#   rules:
+#   - http:
+#       paths:
+#       - backend:
+#           service:
+#             name: {{ .Release.Name }}-event-gateway
+#             port:
+#               number: {{ .Values.eventGateway.service.port }}
+#         path: {{ .Values.eventGateway.httproute.prefixPath.path }}
+#         pathType: Prefix

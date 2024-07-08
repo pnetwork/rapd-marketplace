@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-nginx-config
+data:
+  default.conf: |
+    server {
+        listen  80;
+        server_name  _;
+        location / {
+            proxy_pass http://127.0.0.1:8080;
+            proxy_set_header HOST $host;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Upgrade $http_upgrade;
+        }
+        location /apis/v1 {
+            proxy_pass http://{{ .Release.Name }}-apiserver:8000;
+            proxy_set_header HOST $host;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Upgrade $http_upgrade;
+        }
+        location /events {
+            proxy_pass http://{{ .Release.Name }}-event-gateway:8000;
+            proxy_set_header HOST $host;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Upgrade $http_upgrade;
+        }
+        location /apps/ {
+            rewrite ^/apps/(.*)$ /pare-portal/apps/$1 break;
+            proxy_pass http://{{ .Release.Name }}-minio:9000;
+            proxy_set_header HOST $host;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Upgrade $http_upgrade;
+        }
+    }
+
+---
+
+apiVersion: v1
+data:
+  rapd.config.json: |-
+    {
+        "deployMode": "marketplace"
+    }
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-f2e-config-json

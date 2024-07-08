@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-pare-eventing-provisioner
+  namespace: {{ .Release.Namespace }}
+  labels:
+    kubernetes.io/cluster-service: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:{{ .Release.Name }}-pare-eventing-provisioner
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:{{ .Release.Name }}-pare-eventing-provisioner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:{{ .Release.Name }}-pare-eventing-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-pare-eventing-provisioner
+    namespace: {{ .Release.Namespace }}

@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-apiserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-apiserver
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-apiserver
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-apiserver
+          image: {{ .Values.apiserver.deployment.image.name }}:{{ .Values.apiserver.deployment.image.tag }}
+          ports:
+            - containerPort: {{ .Values.apiserver.service.port }}
+          env:
+            - name: APP_CONFIG
+              value: /etc/app_config/app_config
+            - name: SECRET_CONFIG
+              value: /var/run/secrets
+            - name: BOOTSTRAP_MODE  # [ API_SERVER | EVENT_HANDLER | AUTHENTICATOR ]
+              value: API_SERVER
+            - name: SERVICE_DOMAIN
+              value: {{ .Release.Name }}-apiserver.{{ .Release.Namespace }}
+            - name: REDIS_SECRET_FILE
+              value: /var/run/secrets/pare/redis/redis  # file name is the secret name (Should be created by pare-setting-group; see helmfile)
+            - name: POSTGRES_SECRET_FILE
+              value: /var/run/secrets/pare/postgres/postgres-from-schema-claim  # file name is secret name created by PostgresSchemaClaim
+          volumeMounts:
+            - name: app-config-volume
+              mountPath: /etc/app_config
+              readOnly: true
+            - name: redis-config-volume
+              mountPath: /var/run/secrets/pare/redis
+              readOnly: true
+            - name: rapd-api-postgres-secret
+              mountPath: /var/run/secrets/pare/postgres
+              readOnly: true
+        - name: ubbagent
+          image: gcr.io/pentiumnetwork-rapd-public/ubbagent:1.0.0
+          env:
+          - name: AGENT_CONFIG_FILE
+            value: "/etc/ubbagent/config.yaml"
+          - name: AGENT_LOCAL_PORT
+            value: "4567"
+          - name: AGENT_ENCODED_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.reportingSecret }}
+                key: reporting-key
+          - name: AGENT_CONSUMER_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.reportingSecret }}
+                key: consumer-id
+          volumeMounts:
+            - name: ubbagent-config
+              mountPath: /etc/ubbagent
+      volumes:
+        - name: app-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-app-config-file
+        - name: redis-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-redis-config-file
+        - name: rapd-api-postgres-secret
+          secret:
+            secretName: {{ .Release.Name }}-postgres-from-schema-claim
+        - name: ubbagent-config
+          configMap:
+            name: {{ .Release.Name }}-ubbagent-config
+      serviceAccount: {{ .Release.Name }}-apiserver

@@ -1,0 +1,41 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: eventtriggers.eventing.pare.work
+spec:
+  scope: Namespaced
+  group: eventing.pare.work
+  names:
+    kind: EventTrigger
+    plural: eventtriggers
+    singular: eventtrigger
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                sink_url:
+                  type: string
+                event_filters:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: ["source", "CEL"]
+                      expression:
+                        type: string
+                broker:
+                  type: string
+                  nullable: true
+              x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true

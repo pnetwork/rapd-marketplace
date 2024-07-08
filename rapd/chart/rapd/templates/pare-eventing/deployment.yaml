@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-pare-eventing-api
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-pare-eventing-api
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-pare-eventing-api
+    spec:
+      initContainers:
+      - name: check-postgresql
+        image: docker.io/bitnami/postgresql:14.5.0-debian-11-r24
+        imagePullPolicy: IfNotPresent
+        args:
+          - sh
+          - -c
+          - pg_isready -U ${POSTGRES_USER} -d "dbname=${POSTGRES_DB}" -h ${POSTGRES_HOST} -p 5432 ;
+            while [ $? != 0 ];do sleep 1;echo "postgres server is not ready yet";pg_isready -U ${POSTGRES_USER} -d "dbname=${POSTGRES_DB}" -h ${POSTGRES_HOST} -p 5432;done;
+            echo "postgres server is ready";sleep 10
+        env:
+        - name: "POSTGRES_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-postgresql
+              key: postgres-password
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_HOST
+          value: {{ .Release.Name }}-postgresql-svc
+        - name: POSTGRES_DB
+          value: "postgres"
+      containers:
+      - name: {{ .Release.Name }}-pare-eventing-api
+        image: '{{ .Values.pareEventingApi.deployment.image.repository }}:{{ .Values.pareEventingApi.deployment.image.tag }}'
+        imagePullPolicy: {{ .Values.pareEventingApi.deployment.image.pullPolicy }}
+        command: ["/bin/sh","-c"]
+        args: ["alembic upgrade head && uvicorn app.api.main:app --host 0.0.0.0 --port {{ .Values.pareEventingApi.service.port }} --reload"]
+        env:
+          - name: APP_CONFIG
+            value: /var/run/secrets/app_config/.env
+          - name: POSTGRES_SECRET_FILE
+            value: /var/run/secrets/db/postgres-pare-eventing-from-claim
+          - name: MQ_SECRET_FILE
+            value: /var/run/secrets/mq/rabbitmq-pare-eventing-from-claim
+        volumeMounts:
+          - name: app-config-volume
+            mountPath: /var/run/secrets/app_config
+            readOnly: true
+          - name: db-config-volume
+            mountPath: /var/run/secrets/db
+            readOnly: true
+          - name: mq-config-volume
+            mountPath: /var/run/secrets/mq
+            readOnly: true
+      volumes:
+        - name: app-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-pare-eventing-app-config-file
+        - name: db-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-postgres-pare-eventing-from-claim
+        - name: mq-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-rabbitmq-pare-eventing-from-claim
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-pare-eventing-worker
+spec:
+  replicas: {{ .Values.pareEventingWorker.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-pare-eventing-worker
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-pare-eventing-worker
+    spec:
+      containers:
+      - name: {{ .Release.Name }}-pare-eventing-worker
+        image: '{{ .Values.pareEventingWorker.deployment.image.repository }}:{{ .Values.pareEventingWorker.deployment.image.tag }}'
+        imagePullPolicy: {{ .Values.pareEventingWorker.deployment.image.pullPolicy }}
+        command: ["/bin/sh","-c"]
+        args: ["python app/cli/__main__.py engine start-event-trigger-engine"]
+        env:
+          - name: APP_CONFIG
+            value: /var/run/secrets/app_config/.env
+          - name: POSTGRES_SECRET_FILE
+            value: /var/run/secrets/db/postgres-pare-eventing-from-claim
+          - name: MQ_SECRET_FILE
+            value: /var/run/secrets/mq/rabbitmq-pare-eventing-from-claim
+        volumeMounts:
+          - name: app-config-volume
+            mountPath: /var/run/secrets/app_config
+            readOnly: true
+          - name: db-config-volume
+            mountPath: /var/run/secrets/db
+            readOnly: true
+          - name: mq-config-volume
+            mountPath: /var/run/secrets/mq
+            readOnly: true
+      volumes:
+        - name: app-config-volume
+          secret:
+            secretName:  {{ .Release.Name }}-pare-eventing-app-config-file
+        - name: db-config-volume
+          secret:
+            secretName:  {{ .Release.Name }}-postgres-pare-eventing-from-claim
+        - name: mq-config-volume
+          secret:
+            secretName:  {{ .Release.Name }}-rabbitmq-pare-eventing-from-claim
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-pare-eventing-provisioner
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-pare-eventing-provisioner
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-pare-eventing-provisioner
+    spec:
+      containers:
+      - name: {{ .Release.Name }}-pare-eventing-provisioner
+        image: '{{ .Values.pareEventingProvisioner.deployment.image.repository }}:{{ .Values.pareEventingProvisioner.deployment.image.tag }}'
+        imagePullPolicy: {{ .Values.pareEventingProvisioner.deployment.image.pullPolicy }}
+        command: ["kopf" , "run" , "app/provisioner/main.py", "-A"]
+        env:
+          - name: EVENTING_HOST
+            value: "http://{{ .Values.pareEventingProvisioner.service.name }}:{{ .Values.pareEventingProvisioner.service.port }}"  # api k8s service name
+      serviceAccount: {{ .Release.Name }}-pare-eventing-provisioner
+      serviceAccountName: {{ .Release.Name }}-pare-eventing-provisioner

@@ -1,0 +1,330 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    batch.kubernetes.io/job-tracking: ""
+  labels:
+    job-name: s3-upload-job-billing-app
+  name: s3-upload-job-billing-app
+spec:
+  template:
+    metadata:
+      labels:
+        job-name: s3-upload-job-billing-app
+    spec:
+      containers:
+      - args:
+        - until mc alias set myminio ${S3_HOST} ${S3_ACCESS_KEY} ${S3_SECRET_KEY}
+          ; do sleep 2 ; done ; mc mb -p myminio/${DEFAULT_BUCKET_NAME} ; mc anonymous
+          set download myminio/${DEFAULT_BUCKET_NAME} ; mc cp -r /export/html/ myminio/${DEFAULT_BUCKET_NAME}/apps/billing_app
+          ; mc ls myminio/${DEFAULT_BUCKET_NAME};
+        command:
+        - /bin/bash
+        - -c
+        env:
+        - name: S3_HOST
+          value: http://{{ .Release.Name }}-minio:9000
+        - name: DEFAULT_BUCKET_NAME
+          value: pare-portal
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: rootUser
+              name: {{ .Release.Name }}-minio
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: rootPassword
+              name: {{ .Release.Name }}-minio
+        image: cr.pentium.network/minio-mc:RELEASE.2023-02-28T00-12-59Z
+        imagePullPolicy: IfNotPresent
+        name: uploader
+        volumeMounts:
+        - mountPath: /export
+          name: shared-data
+      initContainers:
+      - name: check-minio
+        image: public.ecr.aws/d3c8d7n6/alpine/curl
+        args:
+          - sh
+          - -c
+          - until curl -I -s -o /dev/null -w "%{http_code}" http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live; do
+              echo "MinIO server not ready yet";
+              sleep 1;
+            done;
+            echo "MinIO server is ready"
+        env:
+          - name: MINIO_PORT
+            value: "9000"
+          - name: MINIO_HOST
+            value: {{ .Release.Name }}-minio
+      - command:
+        - /bin/sh
+        - -c
+        - mv /usr/share/nginx/html /export
+        image: {{ .Values.uapp.billing.image.repo }}:{{ .Values.uapp.billing.image.tag }}
+        imagePullPolicy: IfNotPresent
+        name: export-uapp
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /export
+          name: shared-data
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: shared-data
+
+---
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    batch.kubernetes.io/job-tracking: ""
+  labels:
+    job-name: s3-upload-job-cloud-app 
+  name: s3-upload-job-cloud-app 
+spec:
+  template:
+    metadata:
+      labels:
+        job-name: s3-upload-job-cloud-app 
+    spec:
+      containers:
+      - args:
+        - until mc alias set myminio ${S3_HOST} ${S3_ACCESS_KEY} ${S3_SECRET_KEY}
+          ; do sleep 2 ; done ; mc mb -p myminio/${DEFAULT_BUCKET_NAME} ; mc anonymous
+          set download myminio/${DEFAULT_BUCKET_NAME} ; mc cp -r /export/html/ myminio/${DEFAULT_BUCKET_NAME}/apps/cloud_app
+          ; mc ls myminio/${DEFAULT_BUCKET_NAME};
+        command:
+        - /bin/bash
+        - -c
+        env:
+        - name: S3_HOST
+          value: http://{{ .Release.Name }}-minio:9000
+        - name: DEFAULT_BUCKET_NAME
+          value: pare-portal
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: rootUser
+              name: {{ .Release.Name }}-minio
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: rootPassword
+              name: {{ .Release.Name }}-minio
+        image: cr.pentium.network/minio-mc:RELEASE.2023-02-28T00-12-59Z
+        imagePullPolicy: IfNotPresent
+        name: uploader
+        volumeMounts:
+        - mountPath: /export
+          name: shared-data
+      initContainers:
+      - name: check-minio
+        image: public.ecr.aws/d3c8d7n6/alpine/curl
+        args:
+          - sh
+          - -c
+          - until curl -I -s -o /dev/null -w "%{http_code}" http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live; do
+              echo "MinIO server not ready yet";
+              sleep 1;
+            done;
+            echo "MinIO server is ready"
+        env:
+          - name: MINIO_PORT
+            value: "9000"
+          - name: MINIO_HOST
+            value: {{ .Release.Name }}-minio
+      - command:
+        - /bin/sh
+        - -c
+        - mv /usr/share/nginx/html /export
+        image: {{ .Values.uapp.cloud.image.repo }}:{{ .Values.uapp.cloud.image.tag }}
+        imagePullPolicy: IfNotPresent
+        name: export-uapp
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /export
+          name: shared-data
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: shared-data
+
+
+---
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    batch.kubernetes.io/job-tracking: ""
+  labels:
+    job-name: s3-upload-job-cluster-app
+  name: s3-upload-job-cluster-app 
+spec:
+  template:
+    metadata:
+      labels:
+        job-name: s3-upload-job-cluster-app
+    spec:
+      containers:
+      - args:
+        - until mc alias set myminio ${S3_HOST} ${S3_ACCESS_KEY} ${S3_SECRET_KEY}
+          ; do sleep 2 ; done ; mc mb -p myminio/${DEFAULT_BUCKET_NAME} ; mc anonymous
+          set download myminio/${DEFAULT_BUCKET_NAME} ; mc cp -r /export/html/ myminio/${DEFAULT_BUCKET_NAME}/apps/cluster_app
+          ; mc ls myminio/${DEFAULT_BUCKET_NAME};
+        command:
+        - /bin/bash
+        - -c
+        env:
+        - name: S3_HOST
+          value: http://{{ .Release.Name }}-minio:9000
+        - name: DEFAULT_BUCKET_NAME
+          value: pare-portal
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: rootUser
+              name: {{ .Release.Name }}-minio
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: rootPassword
+              name: {{ .Release.Name }}-minio
+        image: cr.pentium.network/minio-mc:RELEASE.2023-02-28T00-12-59Z
+        imagePullPolicy: IfNotPresent
+        name: uploader
+        volumeMounts:
+        - mountPath: /export
+          name: shared-data
+      initContainers:
+      - name: check-minio
+        image: public.ecr.aws/d3c8d7n6/alpine/curl
+        args:
+          - sh
+          - -c
+          - until curl -I -s -o /dev/null -w "%{http_code}" http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live; do
+              echo "MinIO server not ready yet";
+              sleep 1;
+            done;
+            echo "MinIO server is ready"
+        env:
+          - name: MINIO_PORT
+            value: "9000"
+          - name: MINIO_HOST
+            value: {{ .Release.Name }}-minio
+      - command:
+        - /bin/sh
+        - -c
+        - mv /usr/share/nginx/html /export
+        image: {{ .Values.uapp.cluster.image.repo }}:{{ .Values.uapp.cluster.image.tag }}
+        imagePullPolicy: IfNotPresent
+        name: export-uapp
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /export
+          name: shared-data
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: shared-data
+
+---
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    batch.kubernetes.io/job-tracking: ""
+  labels:
+    job-name: s3-upload-job-environment-app
+  name: s3-upload-job-environment-app
+spec:
+  template:
+    metadata:
+      labels:
+        job-name: s3-upload-job-environment-app
+    spec:
+      containers:
+      - args:
+        - until mc alias set myminio ${S3_HOST} ${S3_ACCESS_KEY} ${S3_SECRET_KEY}
+          ; do sleep 2 ; done ; mc mb -p myminio/${DEFAULT_BUCKET_NAME} ; mc anonymous
+          set download myminio/${DEFAULT_BUCKET_NAME} ; mc cp -r /export/html/ myminio/${DEFAULT_BUCKET_NAME}/apps/environment_app
+          ; mc ls myminio/${DEFAULT_BUCKET_NAME};
+        command:
+        - /bin/bash
+        - -c
+        env:
+        - name: S3_HOST
+          value: http://{{ .Release.Name }}-minio:9000
+        - name: DEFAULT_BUCKET_NAME
+          value: pare-portal
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: rootUser
+              name: {{ .Release.Name }}-minio
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: rootPassword
+              name: {{ .Release.Name }}-minio
+        image: cr.pentium.network/minio-mc:RELEASE.2023-02-28T00-12-59Z
+        imagePullPolicy: IfNotPresent
+        name: uploader
+        volumeMounts:
+        - mountPath: /export
+          name: shared-data
+      initContainers:
+      - name: check-minio
+        image: public.ecr.aws/d3c8d7n6/alpine/curl
+        args:
+          - sh
+          - -c
+          - until curl -I -s -o /dev/null -w "%{http_code}" http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live; do
+              echo "MinIO server not ready yet";
+              sleep 1;
+            done;
+            echo "MinIO server is ready"
+        env:
+          - name: MINIO_PORT
+            value: "9000"
+          - name: MINIO_HOST
+            value: {{ .Release.Name }}-minio
+      - command:
+        - /bin/sh
+        - -c
+        - mv /usr/share/nginx/html /export
+        image: {{ .Values.uapp.environment.image.repo }}:{{ .Values.uapp.environment.image.tag }}
+        imagePullPolicy: IfNotPresent
+        name: export-uapp
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /export
+          name: shared-data
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: shared-data

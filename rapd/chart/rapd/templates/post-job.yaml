@@ -1,0 +1,188 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-setup-databases
+  annotations:
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: setup-postgresql
+        image: docker.io/bitnami/postgresql:14.5.0-debian-11-r24
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+
+          pg_isready -U ${POSTGRES_USER} -d "dbname=${POSTGRES_DB}" -h ${POSTGRES_HOST} -p 5432 ;
+          while [ $? != 0 ];do sleep 1;echo "postgres server is not ready yet";pg_isready -U ${POSTGRES_USER} -d "dbname=${POSTGRES_DB}" -h ${POSTGRES_HOST} -p 5432;done;
+          echo "postgres server is ready"
+
+          # rapd
+          RAPD_USER=$(echo "$RAPD_INFO" | grep  '^USERNAME=\.*'  |cut -d '=' -f 2)
+          RAPD_PASSWORD=$(echo "$RAPD_INFO" | grep  '^PASSWORD=\.*' |cut -d '=' -f 2)
+          RAPD_SCHEMA=$(echo "$RAPD_INFO" | grep  '^SCHEMA_NAME=\.*' |cut -d '=' -f 2)
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -c "
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${RAPD_USER}') THEN
+              CREATE USER ${RAPD_USER} WITH PASSWORD '${RAPD_PASSWORD}';
+            END IF;
+          END
+          \$\$;"
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -c "
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = '${RAPD_SCHEMA}') THEN
+              CREATE SCHEMA ${RAPD_SCHEMA} AUTHORIZATION ${RAPD_USER};
+            END IF;
+          END
+          \$\$;"
+
+          # pare-eventing
+          EVENT_USER=$(echo "$EVENT_INFO" | grep  '^USERNAME=\.*'  |cut -d '=' -f 2)
+          EVENT_PASSWORD=$(echo "$EVENT_INFO"  | grep  '^PASSWORD=\.*' |cut -d '=' -f 2)
+          EVENT_SCHEMA=$(echo "$EVENT_INFO" | grep  '^SCHEMA_NAME=\.*' |cut -d '=' -f 2)
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -c "
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${EVENT_USER}') THEN
+              CREATE USER ${EVENT_USER} WITH PASSWORD '${EVENT_PASSWORD}';
+            END IF;
+          END
+          \$\$;"
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -c "
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = '${EVENT_SCHEMA}') THEN
+              CREATE SCHEMA ${EVENT_SCHEMA} AUTHORIZATION ${EVENT_USER};
+            END IF;
+          END
+          \$\$;"
+          # po
+          PO_USER=$(echo "$PO_INFO" | grep  '^USERNAME=\.*'  |cut -d '=' -f 2)
+          PO_PASSWORD=$(echo "$PO_INFO"  | grep  '^PASSWORD=\.*' |cut -d '=' -f 2)
+          PO_SCHEMA=$(echo "$PO_INFO" | grep  '^SCHEMA_NAME=\.*' |cut -d '=' -f 2)
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -c "
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${PO_USER}') THEN
+              CREATE USER ${PO_USER} WITH PASSWORD '${PO_PASSWORD}';
+            END IF;
+          END
+          \$\$;"
+          PGPASSWORD="$POSTGRES_PASSWORD" psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB -c "
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = '${PO_SCHEMA}') THEN
+              CREATE SCHEMA ${PO_SCHEMA} AUTHORIZATION ${PO_USER};
+            END IF;
+          END
+          \$\$;"
+        env:
+        - name: "POSTGRES_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-postgresql
+              key: postgres-password
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_HOST
+          value: {{ .Release.Name }}-postgresql-svc
+        - name: POSTGRES_DB
+          value: "postgres"
+        - name: RAPD_INFO
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-postgres-from-schema-claim
+              key: postgres-from-schema-claim
+        - name: EVENT_INFO
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-postgres-pare-eventing-from-claim
+              key: postgres-pare-eventing-from-claim
+        - name: PO_INFO
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-pentium-postgres
+              key: pentium-postgres
+      - name: setup-rabbitmq
+        image: curlimages/curl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+
+          curl -f --user $RABBITMQ_USER:$RABBITMQ_PASSWORD $RABBITMQ_HOST:15672/api/health/checks/local-alarms;
+          while [ $? != 0 ];do echo "wait startup ..." && sleep 3 && curl -f --user $RABBITMQ_USER:$RABBITMQ_PASSWORD $RABBITMQ_HOST:15672/api/health/checks/local-alarms;done 
+
+          NEW_USER=$(echo "$EVENT_USER" | grep '^USERNAME=\.*' |cut -d '=' -f 2)
+          NEW_PASSWORD=$(echo "$EVENT_USER" | grep '^PASSWORD=\.*' |cut -d '=' -f 2)
+          NEW_VHOST=$(echo "$EVENT_USER" | grep '^BROKER_NAME=\.*' |cut -d '=' -f 2)
+          echo $NEW_USER $NEW_PASSWORD $NEW_VHOST
+          curl -u $RABBITMQ_USER:$RABBITMQ_PASSWORD -XPUT -H "content-type:application/json" \
+            -d "{\"password\":\"$NEW_PASSWORD\",\"tags\":\"administrator\"}" \
+            http://$RABBITMQ_HOST:15672/api/users/$NEW_USER
+          curl -u $RABBITMQ_USER:$RABBITMQ_PASSWORD -X PUT -H "Content-Type:application/json" \
+            http://$RABBITMQ_HOST:15672/api/vhosts/$NEW_VHOST
+          curl -u $RABBITMQ_USER:$RABBITMQ_PASSWORD -XPUT -H "content-type:application/json" \
+            -d '{"configure":".*","write":".*","read":".*"}' \
+            http://$RABBITMQ_HOST:15672/api/permissions/$NEW_VHOST/$NEW_USER
+          sleep 60
+        env:
+        - name: RABBITMQ_USER
+          value: "user"
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-rabbitmq
+              key: rabbitmq-password
+        - name: RABBITMQ_HOST
+          value: {{ .Release.Name }}-rabbitmq
+        - name: EVENT_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-rabbitmq-pare-eventing-from-claim
+              key: rabbitmq-pare-eventing-from-claim
+      containers:
+      - name: migration
+        image: {{ .Values.apiserver.deployment.image.name }}:{{ .Values.apiserver.deployment.image.tag }}
+        command: ["sh" , "-c"]
+        args:
+          - python -m cli event subscribe -m $${DEPLOY_TARGET_TYPE} && python -m cli event unsubscribe-old-event -m $${DEPLOY_TARGET_TYPE} && python -m cli db upgrade
+        env:
+          - name: APP_CONFIG
+            value: /etc/app_config/app_config
+          - name: POSTGRES_SECRET_FILE
+            value: /var/run/secrets/pare/postgres/postgres-from-schema-claim
+          - name: BOOTSTRAP_MODE
+            value: API_SERVER
+          - name: SERVICE_DOMAIN
+            value: {{ .Release.Name }}-apiserver.{{ .Release.Namespace }}
+          - name: REDIS_SECRET_FILE
+            value: /var/run/secrets/pare/redis/redis
+          - name: DEPLOY_TARGET_TYPE
+            value: gcp
+          - name: ADMIN_USER_ACCOUNT
+            value: {{ .Values.adminUserAccount }}
+        volumeMounts:
+          - name: app-config-volume
+            mountPath: /etc/app_config
+            readOnly: true
+          - name: rapd-api-postgres-secret
+            mountPath: /var/run/secrets/pare/postgres
+            readOnly: true
+          - name: redis-config-volume
+            mountPath: /var/run/secrets/pare/redis
+            readOnly: true
+      restartPolicy: Never
+      volumes:
+        - name: app-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-app-config-file
+        - name: redis-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-redis-config-file
+        - name: rapd-api-postgres-secret
+          secret:
+            secretName: {{ .Release.Name }}-postgres-from-schema-claim
+

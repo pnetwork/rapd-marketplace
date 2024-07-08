@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-event-handler
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-event-handler
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-event-handler
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-event-handler
+          image: {{ .Values.eventHandler.deployment.image.name }}:{{ .Values.eventHandler.deployment.image.tag }}
+          ports:
+            - containerPort: {{ .Values.eventHandler.service.port }}
+          env:
+            - name: APP_CONFIG
+              value: /etc/app_config/app_config
+            - name: SECRET_CONFIG
+              value: /var/run/secrets
+            - name: BOOTSTRAP_MODE  # [ API_SERVER | EVENT_HANDLER | AUTHENTICATOR ]
+              value: EVENT_HANDLER
+            - name: SERVICE_DOMAIN
+              value: {{ .Release.Name }}-event-handler.{{ .Release.Namespace }}
+            - name: REDIS_SECRET_FILE
+              value: /var/run/secrets/pare/redis/redis
+            - name: POSTGRES_SECRET_FILE
+              value: /var/run/secrets/pare/postgres/postgres-from-schema-claim
+          volumeMounts:
+            - name: app-config-volume
+              mountPath: /etc/app_config
+              readOnly: true
+            - name: redis-config-volume
+              mountPath: /var/run/secrets/pare/redis
+              readOnly: true
+            - name: rapd-api-postgres-secret
+              mountPath: /var/run/secrets/pare/postgres
+              readOnly: true
+      volumes:
+        - name: app-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-app-config-file
+        - name: redis-config-volume
+          secret:
+            secretName: {{ .Release.Name }}-redis-config-file
+        - name: rapd-api-postgres-secret
+          secret:
+            secretName: {{ .Release.Name }}-postgres-from-schema-claim
+      serviceAccount: {{ .Release.Name }}-event-handler

@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: mavis-auto-po
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/part-of: mavis-auto-po
+    control-plane: {{ .Release.Name }}-controller-manager
+  name: {{ .Release.Name }}-controller-manager
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      control-plane: {{ .Release.Name }}-controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: {{ .Release.Name }}-controller-manager
+    spec:
+      initContainers:
+      - name: check-postgresql
+        image: docker.io/bitnami/postgresql:14.5.0-debian-11-r24
+        imagePullPolicy: IfNotPresent
+        args:
+          - sh
+          - -c
+          - pg_isready -U ${POSTGRES_USER} -d "dbname=${POSTGRES_DB}" -h ${POSTGRES_HOST} -p 5432 ;
+            while [ $? != 0 ];do sleep 1;echo "postgres server is not ready yet";pg_isready -U ${POSTGRES_USER} -d "dbname=${POSTGRES_DB}" -h ${POSTGRES_HOST} -p 5432;done;
+            echo "postgres server is ready";sleep 10
+        env:
+        - name: "POSTGRES_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-postgresql
+              key: postgres-password
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_HOST
+          value: {{ .Release.Name }}-postgresql-svc
+        - name: POSTGRES_DB
+          value: "postgres"
+      containers:
+      - args:
+        - while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done ;/home/nonroot/mavis-auto-po -deploy-mode Server
+        command:
+        - sh
+        - -c
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: ResourceBundleConcurrent
+          value: "5"
+        image: cr-preview.pentium.network/mavis-auto/platform-orchestrator:3-de63180
+        imagePullPolicy: IfNotPresent
+        name: manager
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 10m
+            memory: 32Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/rapd
+          name: mavis-auto-volume
+      - args:
+        - export ${POSTGRES} ; K3S_DATASTORE_ENDPOINT="postgres://${USERNAME}:${PASSWORD}@${HOST}:${PORT}/${DATABASE_NAME}?search_path=${SCHEMA_NAME}"
+          /bin/k3s server --disable-agent --disable=metrics-server --tls-san=${NAMESPACE}.rapd-demo.online
+          --tls-san=engine-k3s.${NAMESPACE};
+        command:
+        - sh
+        - -c
+        env:
+        - name: K3S_KUBECONFIG_MODE
+          value: "644"
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: POSTGRES
+          valueFrom:
+            secretKeyRef:
+              key: pentium-postgres
+              name: {{ .Release.Name }}-pentium-postgres
+        image: rancher/k3s:v1.25.16-k3s4
+        imagePullPolicy: Always
+        name: k3s-server
+        ports:
+        - containerPort: 6443
+          name: https
+          protocol: TCP
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 800Mi
+          requests:
+            cpu: 30m
+            memory: 300Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/rancher/k3s
+          name: k3s-server-data
+        - mountPath: /etc/rancher
+          name: mavis-auto-volume
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: controller-manager
+      serviceAccountName: controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - emptyDir:
+          sizeLimit: 10Mi
+        name: mavis-auto-volume
+      - name: k3s-server-data
+        persistentVolumeClaim:
+          claimName: k3s-data

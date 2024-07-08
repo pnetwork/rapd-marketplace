@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: {{ .Release.Name }}-event-gateway
+  name: {{ .Release.Name }}-event-gateway
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: {{ .Release.Name }}-event-gateway
+  ports:
+    - protocol: TCP
+      port: {{ .Values.eventGateway.service.port }}
+      targetPort: {{ .Values.eventGateway.service.port }}
+  type: ClusterIP

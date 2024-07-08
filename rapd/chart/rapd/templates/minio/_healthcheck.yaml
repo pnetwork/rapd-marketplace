@@ -1,0 +1,15 @@
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: {{ .Release.Name }}-minio-healthcheck
+spec:
+  default:
+    config:
+      type: HTTP
+      httpHealthCheck:
+        port: 9000
+        requestPath: /minio/health/live
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ .Release.Name }}-minio
