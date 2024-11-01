@@ -44,7 +44,7 @@ spec:
           value: "postgres"
       containers:
       - args:
-        - while [ ! -f /etc/rancher/k3s/k3s.yaml ]; do sleep 1; done ;/home/nonroot/mavis-auto-po -deploy-mode Server
+        - while [ ! -f /etc/rapd/k3s/k3s.yaml ]; do sleep 1; done ;/home/nonroot/mavis-auto-po -deploy-mode Server
         command:
         - sh
         - -c

@@ -1,8 +1,11 @@
-certificate:
-reportingSecret:
+domain:
+tls:
+  base64EncodedPrivateKey: null
+  base64EncodedCertificate: null
+certificate: false
+reportingSecret: null
 adminUserAccount:
 apiserver:
-  domain:
   gateway:
     name: default-gateway
     namespace: gateway-system

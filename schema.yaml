@@ -56,15 +56,22 @@ properties:
     default: noreply@example.com
     # https://www.w3.org/TR/html52/sec-forms.html#email-state-typeemail
     pattern: ^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$
-  apiserver.domain:
+  domain:
     title: Rapd domain host
     description: Please configure your domain as a CNAME record pointing to our service domain in your DNS settings. 
     type: string
+#  certificate:
+#    title: GCP certificate name
+#    description: Please enter the name of the pre-created Google management certificate.
+#    type: string
   certificate:
-    title: GCP certificate name
-    description: Please enter the name of the pre-created Google management certificate.
     type: string
-    
+    x-google-marketplace:
+      type: TLS_CERTIFICATE
+      tlsCertificate:
+        generatedProperties:
+          base64EncodedPrivateKey: tls.base64EncodedPrivateKey
+          base64EncodedCertificate: tls.base64EncodedCertificate    
 
 required:
 - name

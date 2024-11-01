@@ -17,7 +17,7 @@ data:
     # Metric names should match verbatim the identifiers created
     # during pricing setup.
     metrics:
-    - name: requests
+    - name: rapd_pricing_hour
       type: int
 
       # The endpoints section of a metric defines which endpoints the
@@ -32,11 +32,11 @@ data:
       aggregation:
         bufferSeconds: 60
 
-    - name: instance_time
-      type: int
-      endpoints:
-      - name: on_disk
-      - name: servicecontrol
+      #  - name: instance_time
+      #  type: int
+      #  endpoints:
+      #  - name: on_disk
+      #  - name: servicecontrol
 
       # The passthrough marker indicates that no aggregation should
       # occur for this metric. Reports received are immediately sent
@@ -44,7 +44,7 @@ data:
       # instance_time metric since reports are generated
       # automatically by a heartbeat source defined in a later
       # section.
-      passthrough: {}
+      #passthrough: {}
 
     # The endpoints section defines where metering data is ultimately
     # sent. Currently supported endpoints include:
@@ -62,7 +62,7 @@ data:
         identity: gcp
         # The service name is unique to your application and will be
         # provided during onboarding.
-        serviceName: my-application.mp-my-company.appspot.com
+        serviceName: rapd.endpoints.pentiumnetwork-rapd-public.cloud.goog
         consumerId: $AGENT_CONSUMER_ID  # From the reporting secret.
       
 
@@ -71,10 +71,17 @@ data:
     # sends a defined value to a metric at a defined interval. In
     # this example, the heartbeat sends a 60-second value through the
     # "instance_time" metric every minute.
+    #sources:
+    #- name: instance_time_heartbeat
+    #  heartbeat:
+    #    metric: instance_time
+    #    intervalSeconds: 60
+    #    value:
+    #      int64Value: 60
     sources:
     - name: instance_time_heartbeat
       heartbeat:
-        metric: instance_time
+        metric: rapd_pricing_hour
         intervalSeconds: 60
         value:
-          int64Value: 60
+          int64Value: 1 

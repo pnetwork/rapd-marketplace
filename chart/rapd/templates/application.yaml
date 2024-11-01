@@ -6,28 +6,50 @@ metadata:
   labels:
     app.kubernetes.io/name: "{{ .Release.Name }}"
   annotations:
+    kubernetes-engine.cloud.google.com/icon: >-
+      data:image/png;base64,{{ .Files.Get "logo.png" | b64enc }}
     marketplace.cloud.google.com/deploy-info: '{"partner_id": "partner", "product_id": "rapd", "partner_name": "Partner"}'
 spec:
   descriptor:
     type: RAPD
     version: '1.0.0'
     description: >-
-      RAPD is ...
+      Welcome to RAPD. Experience the next-generation deployment tool designed for modern software development. Rapid iteration is crucial in today’s development environment. Manual deployment can be time-consuming and labor-intensive. RAPD simplifies your deployment process, allowing you to focus on development and continuous software iteration.
+    notes: |-
+
+      # Open your Rapd site
+
+      Get the external IP of your WordPress site using the following command:
+
+      ```
+      SERVICE_IP=$(kubectl get ingress {{ .Release.Name }}-nginx \
+        --namespace {{ .Release.Namespace }} \
+        --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+      echo "https://${SERVICE_IP}/"
+      ```
+
+      The command shows you the URL of your site.
+
+      # Update TLS certificate for RAPD
+
+      kubectl --namespace {{ .Release.Namespace }} create secret tls {{ .Release.Name }}-tls \
+      --cert=/tmp/tls.crt --key=/tmp/tls.key --dry-run -o yaml | kubectl apply -f -
+
+
   info:
-  {{- if .Values.certificate  }}
+  {{- if .Values.domain  }}
   - name: Rapd site domain
-    type: Reference
-    valueFrom:
-      ingressRef:
-        name: {{ .Release.Name }}-nginx
-  {{- else }}
+    value: {{ .Values.domain }}
+  {{- end }}
   - name: Rapd site address
     type: Reference
     valueFrom:
       ingressRef:
         name: {{ .Release.Name }}-nginx
         protocol: HTTPS
-  {{- end }}
+  - name: Rapd email address
+    value: {{ .Values.adminUserAccount }} 
   selector:
     matchLabels:
       app.kubernetes.io/name: "{{ .Release.Name }}"

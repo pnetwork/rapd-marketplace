@@ -19,6 +19,9 @@ spec:
       - image: {{ .Values.f2e.deployment.image.name }}:{{ .Values.f2e.deployment.image.tag }}
         name: f2e
         resources: {}
+        volumeMounts:
+        - name: f2e-config
+          mountPath: /usr/share/nginx/html/rapd.config
       - image: nginx
         name: nginx
         resources: {}
@@ -26,8 +29,6 @@ spec:
         - name: nginx-config-volume
           mountPath: /etc/nginx/conf.d/default.conf
           subPath: default.conf
-        - name: f2e-config
-          mountPath: /usr/share/nginx/html/rapd.config                                                                    
       volumes:
       - name: nginx-config-volume
         configMap:
