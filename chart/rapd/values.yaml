@@ -15,7 +15,7 @@ apiserver:
   deployment:
     image:
       name: cr-preview.pentium.network/rapd-apiserver
-      tag: ec45646-20240904063625
+      tag: af706f5-20241108013049
   service:
     port: 8000
 
@@ -26,7 +26,7 @@ authenticator:
   deployment:
     image:
       name: cr-preview.pentium.network/rapd-apiserver
-      tag: ec45646-20240904063625
+      tag: af706f5-20241108013049
   service:
     port: 8000
 
@@ -41,7 +41,7 @@ eventGateway:
   deployment:
     image:
       name: cr-preview.pentium.network/rapd-event-gateway
-      tag: ec45646-20240904063625
+      tag: af706f5-20241108013049
   service:
     port: 8000
 
@@ -52,7 +52,7 @@ eventHandler:
   deployment:
     image:
       name: cr-preview.pentium.network/rapd-apiserver
-      tag: ec45646-20240904063625
+      tag: af706f5-20241108013049
   service:
     port: 8000
 
@@ -64,7 +64,7 @@ f2e:
     name: f2e
     image:
       name: cr.pentium.network/mavis-auto/f2e
-      tag: 394-f33b80e
+      tag: 422-7ae66de
   service:
     name: f2e
     port: 8080
@@ -105,7 +105,7 @@ orchestrator:
   deployment:
     image:
       repository: cr.pentium.network/mavis-auto/platform-orchestrator
-      tag: 3-8ca2473
+      tag: v0.7.5
 
 postgresql:
   image:
@@ -132,16 +132,16 @@ uapp:
   billing:
     image:
       repo: cr.pentium.network/microapps/billing
-      tag: 483-87c18e9
+      tag: 514-97e6ef3
   cloud:
     image:
       repo: cr.pentium.network/microapps/cloud
-      tag: 483-87c18e9
+      tag: 514-97e6ef3
   cluster:
     image:
       repo: cr.pentium.network/microapps/cluster
-      tag: 483-87c18e9
+      tag: 535-ef2df52
   environment:
     image:
       repo: cr.pentium.network/microapps/environment
-      tag: 483-87c18e9
+      tag: 514-97e6ef3
