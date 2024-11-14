@@ -56,7 +56,7 @@ spec:
               fieldPath: metadata.namespace
         - name: ResourceBundleConcurrent
           value: "5"
-        image: cr-preview.pentium.network/mavis-auto/platform-orchestrator:3-de63180
+        image: {{ .Values.orchestrator.deployment.image.repository }}:{{ .Values.orchestrator.deployment.image.tag }}
         imagePullPolicy: IfNotPresent
         name: manager
         resources:
