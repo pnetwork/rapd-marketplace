@@ -8,7 +8,7 @@ steps:
     - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
     - '-f'
     - 'Dockerfile'
-    - '--label'
+    - '--annotation'
     - 'com.googleapis.cloudmarketplace.product.service.name=services/rapd'
     - '.'
 
