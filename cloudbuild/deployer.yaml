@@ -1,6 +1,16 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}', '-f', 'Dockerfile', '.']
+  env:
+    - 'DOCKER_BUILDKIT=1'
+  args:
+    - 'build'
+    - '-t'
+    - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
+    - '-f'
+    - 'Dockerfile'
+    - '--annotation'
+    - 'com.google.cloudmarketplace.product.service.name=rapd'
+    - '.'
 images:
 - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
 
