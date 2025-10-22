@@ -1,15 +1,9 @@
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  env:
-    - 'DOCKER_BUILDKIT=1'
+- name: 'gcr.io/kaniko-project/executor:latest'
   args:
-    - 'build'
-    - '-t'
-    - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
-    - '-f'
-    - 'Dockerfile'
-    - '--annotation'
-    - 'com.google.cloudmarketplace.product.service.name=rapd'
-    - '.'
+    - '--destination=gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
+    - '--dockerfile=Dockerfile'
+    - '--context=.'
+    - '--annotation=com.googleapis.cloudmarketplace.product.service.name=rapd'
 images:
 - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
