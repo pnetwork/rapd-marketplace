@@ -9,7 +9,7 @@ steps:
     - '-f'
     - 'Dockerfile'
     - '--label'
-    - 'com.googleapis.cloudmarketplace.product.service.name=rapd'
+    - 'com.googleapis.cloudmarketplace.product.service.name=services/rapd'
     - '.'
 
 images:
