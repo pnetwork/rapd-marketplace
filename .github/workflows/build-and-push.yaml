@@ -36,5 +36,5 @@ jobs:
 
     - name: Submit Cloud Build
       run: |
-        gcloud builds submit --config cloudbuild/deployer.yaml . --substitutions=_TAG=${{ inputs.image_tag }}
+        gcloud builds submit --config cloudbuild/deployer.yaml . --substitutions=_TAG=${{ inputs.image_tag }} --no-stream-logs
 
