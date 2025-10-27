@@ -4,14 +4,17 @@ steps:
     - 'DOCKER_BUILDKIT=1'
   args:
     - 'build'
-    - '--push'
     - '-t'
     - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
     - '-f'
     - 'Dockerfile'
     - '.'
 
-# Step 2: Install crane and annotate the image
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'push'
+    - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
+
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: bash
   args:
