@@ -14,7 +14,7 @@ spec:
     spec:
       initContainers:
       - name: check-postgresql
-        image: docker.io/bitnami/postgresql:14.5.0-debian-11-r24
+        image: docker.io/bitnamilegacy/postgresql:14.5.0-debian-11-r24
         imagePullPolicy: IfNotPresent
         args:
           - sh
