@@ -27,7 +27,8 @@ steps:
 
       # Annotate the built image
       crane mutate gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG} \
-        --annotation com.googleapis.cloudmarketplace.product.service.name=services/rapd
+        --annotation com.googleapis.cloudmarketplace.product.service.name=services/rapd \
+        --tag gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}
 
 images:
 - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
