@@ -8,9 +8,22 @@ steps:
     - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
     - '-f'
     - 'Dockerfile'
-    - '--annotation'
-    - 'com.googleapis.cloudmarketplace.product.service.name=services/rapd'
     - '.'
+
+# Step 2: Install crane and annotate the image
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: bash
+  args:
+    - -c
+    - |
+      set -e
+      apt-get update && apt-get install -y wget
+      wget https://github.com/google/go-containerregistry/releases/download/v0.20.6/crane_linux_amd64
+      chmod +x crane_linux_amd64 && mv crane_linux_amd64 /usr/local/bin/crane
+
+      # Annotate the built image
+      crane mutate gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG} \
+        --annotation com.googleapis.cloudmarketplace.product.service.name=services/rapd
 
 images:
 - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
