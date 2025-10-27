@@ -18,8 +18,8 @@ steps:
     - |
       set -e
       apt-get update && apt-get install -y wget
-      wget https://github.com/google/go-containerregistry/releases/download/v0.20.6/crane_linux_amd64
-      chmod +x crane_linux_amd64 && mv crane_linux_amd64 /usr/local/bin/crane
+      wget -qO- https://github.com/google/go-containerregistry/releases/download/v0.20.6/go-containerregistry_Linux_x86_64.tar.gz \
+        | tar -zxf - crane && install -m 755 crane /usr/local/bin/crane
 
       # Annotate the built image
       crane mutate gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG} \
