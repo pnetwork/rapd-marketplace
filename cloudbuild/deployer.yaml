@@ -4,6 +4,7 @@ steps:
     - 'DOCKER_BUILDKIT=1'
   args:
     - 'build'
+    - '--push'
     - '-t'
     - 'gcr.io/pentiumnetwork-rapd-public/rapd/deployer:${_TAG}'
     - '-f'
